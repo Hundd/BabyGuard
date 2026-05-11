@@ -1,0 +1,42 @@
+// Snippet showing required changes for android/app/build.gradle
+// Apply on top of the default `flutter create` output.
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"   // <-- added by flutterfire configure
+}
+
+android {
+    namespace "com.example.baby_guard"
+    compileSdk 34
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true   // required by flutter_local_notifications/awesome_notifications
+    }
+
+    kotlinOptions { jvmTarget = '17' }
+
+    defaultConfig {
+        applicationId "com.example.baby_guard"
+        minSdkVersion 23          // noise_meter + mobile_scanner require >=23
+        targetSdkVersion 34
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+}
