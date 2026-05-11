@@ -32,12 +32,17 @@ flutter pub get                          # after pubspec changes
 flutter analyze --no-pub                 # lint — 0 errors expected, info-level lints ok
 flutter test                             # smoke-builds the widget tree; no Firebase init
 flutter test test/widget_test.dart       # single test file
-flutter build apk --debug                # ~5 min cold, ~30 s warm. Outputs build/app/outputs/flutter-apk/app-debug.apk
-flutter run -d <device-id>               # `flutter devices` to list IDs
+flutter build apk --debug --dart-define-from-file=firebase-config.json
+flutter run -d <device-id>  --dart-define-from-file=firebase-config.json
 adb install build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-`lib/firebase_options.dart` is a placeholder. The build succeeds without real keys, but `Firebase.initializeApp()` throws at runtime until the user runs `flutterfire configure`.
+### Firebase config
+
+Two gitignored files hold the project credentials. `firebase-config.example.json` (committed) shows the schema:
+
+- `firebase-config.json` — values fed into [lib/firebase_options.dart](lib/firebase_options.dart) via `String.fromEnvironment`. Every build/run command **must** include `--dart-define-from-file=firebase-config.json` or `Firebase.initializeApp()` throws a `StateError` from the `_assertConfigured` guard.
+- `android/app/google-services.json` — required on disk by the `com.google.gms.google-services` Gradle plugin. The plugin is already enabled in [android/app/build.gradle.kts](android/app/build.gradle.kts) — if the file is missing, the APK build fails at the Android assemble step, not at Dart compile.
 
 ## Architecture (non-obvious bits)
 
@@ -77,7 +82,6 @@ Baby writes `pairs/{pairId}/events/{eventId}` → [functions/index.js](functions
 - **Commit style**: `SPT: <short description>` (no EGSDEV ticket on this personal project). No co-author trailer.
 - **Build artifacts**: `build/`, `.dart_tool/`, `pubspec.lock` is committed (this is an app, not a library). `google-services.json` / `GoogleService-Info.plist` are gitignored.
 - **`flutter create` regen**: Running `flutter create .` again will **not** clobber our `pubspec.yaml`, `AndroidManifest.xml`, or `lib/`. It only adds missing platform scaffolding.
-- **Android Gradle**: The `com.google.gms.google-services` plugin is **commented out** in [android/app/build.gradle.kts](android/app/build.gradle.kts) and declared `apply false` in [android/settings.gradle.kts](android/settings.gradle.kts). Uncomment after `flutterfire configure` drops `google-services.json`.
 
 ## User preferences
 

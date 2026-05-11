@@ -82,13 +82,29 @@ cd BabyGuard
 flutter create --project-name baby_guard --org com.example --platforms=android,ios .
 ```
 
+### Wire Firebase credentials
+
+Two files are required and both are gitignored:
+
+```bash
+# 1. Copy the schema and fill in real values
+cp firebase-config.example.json firebase-config.json
+# Edit firebase-config.json — values come from your Firebase console
+# (Project settings → Your apps → Android app → SDK setup and configuration).
+
+# 2. Drop google-services.json into android/app/
+#    Firebase console → Project settings → Your apps → Android app → google-services.json
+```
+
+`firebase-config.json` is fed into Dart at compile time via `--dart-define-from-file`; `lib/firebase_options.dart` reads each value with `String.fromEnvironment`. `google-services.json` is required by the `com.google.gms.google-services` Gradle plugin and must live at `android/app/google-services.json`.
+
 ### Build the APK
 
 ```bash
 flutter pub get
-flutter analyze        # should print "No issues found" (warnings ok)
+flutter analyze        # should print "No issues found" (info-level lints ok)
 flutter test           # smoke-builds the widget tree
-flutter build apk --debug
+flutter build apk --debug --dart-define-from-file=firebase-config.json
 ```
 
 Output: `build/app/outputs/flutter-apk/app-debug.apk` (~170 MB, debug symbols included).

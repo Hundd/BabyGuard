@@ -3,13 +3,12 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Uncomment after running `flutterfire configure` (which drops google-services.json):
-    // id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.example.baby_guard"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.baby_guard"
-        minSdk = 23           // required by noise_meter + mobile_scanner
+        minSdk = flutter.minSdkVersion           // required by noise_meter + mobile_scanner
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
