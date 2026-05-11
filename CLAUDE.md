@@ -15,7 +15,7 @@ See [README.md](README.md) for the full Firebase Console + build-from-zero walkt
 
 ## Environment
 
-Every Bash command that touches Gradle or `sdkmanager` must have these exported (they are **not** persisted in `~/.zshrc` on this machine yet):
+`JAVA_HOME`, `ANDROID_HOME`, and the related `PATH` entries (cmdline-tools, platform-tools) are exported from `~/.zshrc` on this machine — any fresh shell has `flutter`, `adb`, `java`, and `sdkmanager` on the PATH. If a Bash command from this session ever runs without them (e.g. a non-login shell), re-export:
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
