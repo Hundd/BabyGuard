@@ -83,7 +83,7 @@ class _NoiseTaskHandler extends TaskHandler {
   }
 
   @override
-  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
+  Future<void> onDestroy(DateTime timestamp) async {
     await _meter.dispose();
   }
 }

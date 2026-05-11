@@ -53,7 +53,7 @@ class AppTheme {
           textStyle: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

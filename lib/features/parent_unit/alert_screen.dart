@@ -33,7 +33,7 @@ class _AlertScreenState extends State<AlertScreen> with SingleTickerProviderStat
   }
 
   Future<void> _startVibration() async {
-    final hasVibrator = await Vibration.hasVibrator() ?? false;
+    final hasVibrator = await Vibration.hasVibrator();
     if (!hasVibrator) return;
     // Long pattern: 500ms on, 200ms off, repeat. Most alerts get dismissed quickly.
     _vibrationTimer = Timer.periodic(const Duration(milliseconds: 700), (_) {
