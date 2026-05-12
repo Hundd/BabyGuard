@@ -5,6 +5,25 @@ One phone becomes the **Baby Unit** (listens for sound in the background); the o
 
 ---
 
+## Quick commands
+
+Once your toolchain is set up (see [§ 1a](#1a-build-from-zero-on-macos-apple-silicon)) and Firebase config is in place ([§ 3](#wire-firebase-credentials)), drive everything through the `Makefile`:
+
+```bash
+make help        # list every target
+make ship        # build debug APK and install on every attached device
+make run         # flutter run on the first attached device (hot reload)
+make logs        # tail flutter + errors from the phone
+make logs-fn     # tail Cloud Function logs
+make deploy-fn   # deploy Firestore rules + Cloud Functions
+make test        # widget smoke tests
+make analyze     # static analysis
+```
+
+Common day-to-day loop: edit code → `make ship` → test on phones. For a backend change: edit `functions/index.js` → `make deploy-fn` → `make logs-fn`.
+
+---
+
 ## Project structure
 
 ```
