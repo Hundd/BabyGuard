@@ -1,4 +1,4 @@
-package com.example.baby_guard
+package com.hundd.babyguard
 
 import io.flutter.embedding.android.FlutterActivity
 
