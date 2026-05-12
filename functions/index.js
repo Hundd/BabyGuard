@@ -26,6 +26,10 @@ exports.onAlertEvent = onDocumentCreated(
       return;
     }
     const pair = pairSnap.data();
+    if (pair.parentMuted === true) {
+      console.log(`pair ${pairId} is muted by Parent; skipping FCM`);
+      return;
+    }
     const token = pair.parentToken;
     if (!token) {
       console.warn(`pair ${pairId} has no parentToken yet`);

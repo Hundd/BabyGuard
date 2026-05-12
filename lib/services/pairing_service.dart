@@ -76,6 +76,16 @@ class PairingService {
     await _fb.pair(pairId).update({'parentToken': token});
   }
 
+  /// Parent unit toggles its "pause listening" state. When `true`, the
+  /// Cloud Function in [functions/index.js] skips the FCM send so the
+  /// device doesn't wake.
+  Future<void> setParentMuted({
+    required String pairId,
+    required bool muted,
+  }) async {
+    await _fb.pair(pairId).update({'parentMuted': muted});
+  }
+
   /// Baby unit signals its monitoring state to the Parent via the pair doc.
   /// On `true` we also write a server-side timestamp so the Parent can use it
   /// as a staleness floor (e.g. ignore "monitoring" older than 24 h).

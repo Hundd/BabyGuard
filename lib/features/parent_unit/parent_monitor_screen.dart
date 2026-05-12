@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../providers/pairing_provider.dart';
+import '../../services/pairing_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/status_pill.dart';
 
@@ -21,7 +23,10 @@ class ParentMonitorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pairing = ref.watch(pairingProvider);
     final pairDoc = ref.watch(pairDocProvider);
-    final babyState = _deriveBabyState(pairDoc.value?.data());
+    final data = pairDoc.value?.data();
+    final babyState = _deriveBabyState(data);
+    final muted = data?['parentMuted'] == true;
+    final pairId = pairing.pairId;
 
     return AppScaffold(
       title: AppStrings.parentUnit,
@@ -35,24 +40,28 @@ class ParentMonitorScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
-          Center(child: _statusPillFor(babyState)),
+          Center(
+            child: muted
+                ? StatusPill.warning('Alerts paused')
+                : _statusPillFor(babyState),
+          ),
           const SizedBox(height: 24),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  _StatusIcon(state: babyState),
+                  _StatusIcon(state: muted ? _BabyState.notConnected : babyState),
                   const SizedBox(height: 16),
                   Text(
-                    _headlineFor(babyState),
+                    muted ? 'Alerts are paused on this device.' : _headlineFor(babyState),
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  if (pairing.pairId != null)
+                  if (pairId != null)
                     Text(
-                      'Pair code: ${pairing.pairId}',
+                      'Pair code: $pairId',
                       style: const TextStyle(
                           color: AppColors.textSecondary, letterSpacing: 2),
                     ),
@@ -67,6 +76,8 @@ class ParentMonitorScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          if (pairId != null) _PauseCard(pairId: pairId, muted: muted),
         ],
       ),
     );
@@ -107,6 +118,86 @@ class ParentMonitorScreen extends ConsumerWidget {
       case _BabyState.notConnected:
         return 'Pair with a baby unit to begin.';
     }
+  }
+}
+
+/// Toggle card that mutes / unmutes alerts on this Parent device.
+/// Off by default — the Parent is listening for alerts as soon as it pairs.
+class _PauseCard extends ConsumerStatefulWidget {
+  final String pairId;
+  final bool muted;
+
+  const _PauseCard({required this.pairId, required this.muted});
+
+  @override
+  ConsumerState<_PauseCard> createState() => _PauseCardState();
+}
+
+class _PauseCardState extends ConsumerState<_PauseCard> {
+  bool _busy = false;
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final next = !widget.muted;
+    try {
+      await PairingService.instance.setParentMuted(
+        pairId: widget.pairId,
+        muted: next,
+      );
+    } catch (e) {
+      debugPrint('babyguard.parent: setParentMuted failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update pause state: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Icon(
+              widget.muted ? Icons.notifications_off_outlined : Icons.notifications_active_outlined,
+              color: widget.muted ? AppColors.warning : AppColors.primary,
+              size: 32,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Pause listening',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.muted
+                        ? 'Alerts from the Baby unit are silenced.'
+                        : 'Receive loud alerts when the Baby unit detects sound.',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch.adaptive(
+              value: widget.muted,
+              onChanged: _busy ? null : (_) => _toggle(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
