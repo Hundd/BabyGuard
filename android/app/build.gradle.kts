@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,8 +9,19 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Load upload-key credentials from android/key.properties (gitignored).
+// If the file is missing (CI / fresh clone) release builds fall back to the
+// debug keystore — they still build, just aren't suitable for Play upload.
+val keystoreProperties = Properties().apply {
+    val propsFile = rootProject.file("key.properties")
+    if (propsFile.exists()) {
+        FileInputStream(propsFile).use { load(it) }
+    }
+}
+val hasUploadKey = keystoreProperties.getProperty("storeFile") != null
+
 android {
-    namespace = "com.example.baby_guard"
+    namespace = "com.hundd.babyguard"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -22,17 +36,34 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.baby_guard"
-        minSdk = flutter.minSdkVersion           // required by noise_meter + mobile_scanner
+        applicationId = "com.hundd.babyguard"
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasUploadKey) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

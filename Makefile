@@ -43,6 +43,11 @@ build: ## Build debug APK
 release: ## Build release APK
 	flutter build apk --release --dart-define-from-file=$(FIREBASE_CONFIG)
 
+.PHONY: aab
+aab: ## Build signed release App Bundle (.aab) for Play Console upload
+	flutter build appbundle --release --dart-define-from-file=$(FIREBASE_CONFIG)
+	@echo "→ build/app/outputs/bundle/release/app-release.aab"
+
 .PHONY: clean
 clean: ## Wipe build artifacts
 	flutter clean
