@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/background_service.dart';
 import '../services/noise_meter_service.dart';
 import '../services/pairing_service.dart';
+import 'settings_provider.dart';
 
 class MonitoringState {
   final bool isRunning;
@@ -34,7 +35,9 @@ class MonitoringState {
 }
 
 class MonitoringNotifier extends StateNotifier<MonitoringState> {
-  MonitoringNotifier() : super(const MonitoringState());
+  MonitoringNotifier(this._ref) : super(const MonitoringState());
+
+  final Ref _ref;
 
   final NoiseMeterService _meter = NoiseMeterService();
   StreamSubscription<double>? _dbSub;
@@ -90,12 +93,20 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
   Future<void> _onThresholdExceeded(double db) async {
     final pairId = _activePairId;
     if (pairId == null) return;
-    debugPrint("babyguard.mon: " + 'threshold exceeded: $db dB');
-    try {
-      await PairingService.instance.emitAlertEvent(pairId: pairId, db: db);
-    } catch (e) {
-      debugPrint('babyguard.mon: emit alert failed: $e');
-      state = state.copyWith(lastError: 'alert_write_failed');
+    final repeat = _ref.read(settingsProvider).alertRepeatCount;
+    debugPrint('babyguard.mon: threshold exceeded: $db dB, repeat=$repeat');
+    // Fire the first event immediately, then stagger the rest by 4 s so each
+    // FCM-driven notification has time to play its ~3.6 s chime before the
+    // next one arrives. Background task, no await — keeps the mic loop hot.
+    for (var i = 0; i < repeat; i++) {
+      if (i > 0) await Future.delayed(const Duration(seconds: 4));
+      try {
+        await PairingService.instance.emitAlertEvent(pairId: pairId, db: db);
+      } catch (e) {
+        debugPrint('babyguard.mon: emit alert ($i) failed: $e');
+        state = state.copyWith(lastError: 'alert_write_failed');
+        break;
+      }
     }
   }
 
@@ -137,4 +148,4 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
 
 final monitoringProvider =
     StateNotifierProvider<MonitoringNotifier, MonitoringState>(
-        (ref) => MonitoringNotifier());
+        (ref) => MonitoringNotifier(ref));

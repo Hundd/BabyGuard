@@ -4,10 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppSettings {
   final double thresholdDb;
 
-  const AppSettings({this.thresholdDb = 75});
+  /// How many times the alert chime should play on the Parent each time
+  /// the Baby unit crosses the threshold. Implemented by writing N alert
+  /// events to Firestore with a short stagger.
+  final int alertRepeatCount;
 
-  AppSettings copyWith({double? thresholdDb}) =>
-      AppSettings(thresholdDb: thresholdDb ?? this.thresholdDb);
+  const AppSettings({
+    this.thresholdDb = 75,
+    this.alertRepeatCount = 1,
+  });
+
+  AppSettings copyWith({double? thresholdDb, int? alertRepeatCount}) =>
+      AppSettings(
+        thresholdDb: thresholdDb ?? this.thresholdDb,
+        alertRepeatCount: alertRepeatCount ?? this.alertRepeatCount,
+      );
 }
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
@@ -16,17 +27,31 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 
   static const _kThreshold = 'threshold_db';
+  static const _kAlertRepeat = 'alert_repeat_count';
+  static const int alertRepeatMin = 1;
+  static const int alertRepeatMax = 5;
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final t = prefs.getDouble(_kThreshold);
-    if (t != null) state = state.copyWith(thresholdDb: t);
+    final r = prefs.getInt(_kAlertRepeat);
+    state = state.copyWith(
+      thresholdDb: t,
+      alertRepeatCount: r?.clamp(alertRepeatMin, alertRepeatMax),
+    );
   }
 
   Future<void> setThreshold(double db) async {
     state = state.copyWith(thresholdDb: db);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kThreshold, db);
+  }
+
+  Future<void> setAlertRepeatCount(int count) async {
+    final clamped = count.clamp(alertRepeatMin, alertRepeatMax);
+    state = state.copyWith(alertRepeatCount: clamped);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kAlertRepeat, clamped);
   }
 }
 
