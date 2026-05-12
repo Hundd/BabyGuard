@@ -1,7 +1,10 @@
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/background_service.dart';
+import '../services/noise_meter_service.dart';
+import '../services/pairing_service.dart';
 
 class MonitoringState {
   final bool isRunning;
@@ -31,45 +34,84 @@ class MonitoringState {
 }
 
 class MonitoringNotifier extends StateNotifier<MonitoringState> {
-  MonitoringNotifier() : super(const MonitoringState()) {
-    FlutterForegroundTask.addTaskDataCallback(_onTaskData);
+  MonitoringNotifier() : super(const MonitoringState());
+
+  final NoiseMeterService _meter = NoiseMeterService();
+  StreamSubscription<double>? _dbSub;
+  StreamSubscription<Object>? _errSub;
+  String? _activePairId;
+
+  Future<bool> start({required String pairId}) async {
+    debugPrint('babyguard.mon: start() called, pairId=$pairId, threshold=${state.thresholdDb}');
+    if (state.isRunning) return true;
+    _activePairId = pairId;
+
+    final fgOk = await BackgroundService.instance.start();
+    debugPrint('babyguard.mon: foreground service start ok=$fgOk');
+    if (!fgOk) {
+      debugPrint("babyguard.mon: " + 'foreground service failed to start');
+      state = state.copyWith(lastError: 'service_start_failed');
+      return false;
+    }
+
+    try {
+      await _meter.start(
+        thresholdDb: state.thresholdDb,
+        onThresholdExceeded: _onThresholdExceeded,
+      );
+    } catch (e, st) {
+      debugPrint('babyguard.mon: noise_meter start error: $e\n$st');
+      state = state.copyWith(lastError: 'mic_start_failed: $e');
+      await BackgroundService.instance.stop();
+      return false;
+    }
+
+    _dbSub = _meter.dbStream.listen((db) {
+      state = state.copyWith(currentDb: db);
+    }, onError: (e) {
+      debugPrint('babyguard.mon: noise_meter stream error: $e');
+      state = state.copyWith(lastError: 'mic_stream_error: $e');
+    });
+
+    debugPrint("babyguard.mon: " + 'monitoring started, pairId=$pairId');
+    state = state.copyWith(isRunning: true, lastError: null);
+    return true;
   }
 
-  void _onTaskData(Object data) {
-    if (data is Map) {
-      if (data['db'] is num) {
-        state = state.copyWith(currentDb: (data['db'] as num).toDouble());
-      }
-      if (data['error'] is String) {
-        state = state.copyWith(lastError: data['error'] as String);
-      }
+  Future<void> _onThresholdExceeded(double db) async {
+    final pairId = _activePairId;
+    if (pairId == null) return;
+    debugPrint("babyguard.mon: " + 'threshold exceeded: $db dB');
+    try {
+      await PairingService.instance.emitAlertEvent(pairId: pairId, db: db);
+    } catch (e) {
+      debugPrint('babyguard.mon: emit alert failed: $e');
+      state = state.copyWith(lastError: 'alert_write_failed');
     }
   }
 
-  Future<bool> start({required String pairId}) async {
-    final ok = await BackgroundService.instance.start(
-      config: MonitoringConfig(pairId: pairId, thresholdDb: state.thresholdDb),
-    );
-    if (ok) state = state.copyWith(isRunning: true, lastError: null);
-    return ok;
-  }
-
   Future<bool> stop() async {
+    await _dbSub?.cancel();
+    await _errSub?.cancel();
+    await _meter.stop();
     final ok = await BackgroundService.instance.stop();
-    if (ok) state = state.copyWith(isRunning: false, currentDb: 0);
+    debugPrint("babyguard.mon: " + 'monitoring stopped');
+    state = state.copyWith(isRunning: false, currentDb: 0);
     return ok;
   }
 
   Future<void> setThreshold(double db) async {
     state = state.copyWith(thresholdDb: db);
     if (state.isRunning) {
-      await BackgroundService.instance.updateThreshold(db);
+      _meter.updateThreshold(db);
     }
   }
 
   @override
   void dispose() {
-    FlutterForegroundTask.removeTaskDataCallback(_onTaskData);
+    _dbSub?.cancel();
+    _errSub?.cancel();
+    _meter.dispose();
     super.dispose();
   }
 }

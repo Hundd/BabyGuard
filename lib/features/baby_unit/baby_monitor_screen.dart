@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,15 +80,19 @@ class BabyMonitorScreen extends ConsumerWidget {
   }
 
   Future<void> _toggle(BuildContext context, WidgetRef ref, String pairId) async {
+    debugPrint('babyguard.ui: toggle pressed');
     final notifier = ref.read(monitoringProvider.notifier);
     final state = ref.read(monitoringProvider);
 
     if (state.isRunning) {
+      debugPrint('babyguard.ui: stopping');
       await notifier.stop();
       return;
     }
 
+    debugPrint('babyguard.ui: requesting permissions');
     final ok = await PermissionHelper.requestBabyUnitPermissions();
+    debugPrint('babyguard.ui: permissions granted=$ok');
     if (!ok) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

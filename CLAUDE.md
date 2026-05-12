@@ -46,12 +46,15 @@ Two gitignored files hold the project credentials. `firebase-config.example.json
 
 ## Architecture (non-obvious bits)
 
-### Multiple Dart isolates
+### Where the mic lives — main isolate, not the foreground-task isolate
 
-The Baby Unit runs **three** isolates: the UI isolate, the `flutter_foreground_task` isolate (background mic), and the FCM background handler isolate (when push arrives). Each one is a fresh VM:
+The original design ran `noise_meter` inside `flutter_foreground_task`'s isolate, but the `audio_streamer` MethodChannel doesn't fire reliably there on Samsung One UI / Android 11 — the service started, the notification showed, but no dB readings ever came through. Verified against logcat: zero `AudioRecord` / `AudioFlinger` activity.
 
-- It **must reinit Firebase** on entry (see `_NoiseTaskHandler.onStart` in [lib/services/background_service.dart](lib/services/background_service.dart) and `firebaseMessagingBackgroundHandler` in [lib/services/fcm_service.dart](lib/services/fcm_service.dart)).
-- It **cannot share Riverpod providers** with the UI isolate. Communication is via `FlutterForegroundTask.sendDataToMain` / `sendDataToTask`, hooked up in [lib/providers/monitoring_provider.dart](lib/providers/monitoring_provider.dart) via `addTaskDataCallback`.
+Current architecture:
+
+- **Main UI isolate** owns `NoiseMeterService`, threshold detection, and the Firestore alert write. Lives in [lib/providers/monitoring_provider.dart](lib/providers/monitoring_provider.dart):`MonitoringNotifier`.
+- **Foreground-task isolate** ([lib/services/background_service.dart](lib/services/background_service.dart):`_KeepAliveTaskHandler`) does **nothing** except keep the persistent "BabyGuard is monitoring" notification alive so the OS doesn't kill the app while screen is off. Don't add audio/Firebase logic to this handler — it won't fire on all OEMs.
+- **FCM background handler** ([lib/services/fcm_service.dart](lib/services/fcm_service.dart):`firebaseMessagingBackgroundHandler`) is still a separate isolate spawned when push arrives while the app is killed. **Must reinit Firebase** on entry.
 - The `@pragma('vm:entry-point')` annotation on `startMonitoringCallback`, `firebaseMessagingBackgroundHandler`, and `_onNotificationAction` is load-bearing — tree-shaking will strip them otherwise.
 
 ### Threshold debounce + cooldown
