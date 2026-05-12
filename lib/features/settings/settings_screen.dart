@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../providers/monitoring_provider.dart';
 import '../../providers/pairing_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/big_button.dart';
@@ -16,6 +17,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final monitoring = ref.watch(monitoringProvider);
     final pairing = ref.watch(pairingProvider);
+    final settings = ref.watch(settingsProvider);
 
     return AppScaffold(
       title: AppStrings.settings,
@@ -35,6 +37,25 @@ class SettingsScreen extends ConsumerWidget {
               value: monitoring.thresholdDb,
               label: '${monitoring.thresholdDb.toStringAsFixed(0)} dB',
               onChanged: (v) => ref.read(monitoringProvider.notifier).setThreshold(v),
+            ),
+            const Divider(),
+            ListTile(
+              title: const Text('Alert repeat'),
+              subtitle: Text(
+                '${settings.alertRepeatCount}× — chime plays back-to-back '
+                'on the Parent unit each time the threshold is crossed.',
+              ),
+              trailing: const Icon(Icons.repeat),
+            ),
+            Slider(
+              min: SettingsNotifier.alertRepeatMin.toDouble(),
+              max: SettingsNotifier.alertRepeatMax.toDouble(),
+              divisions:
+                  SettingsNotifier.alertRepeatMax - SettingsNotifier.alertRepeatMin,
+              value: settings.alertRepeatCount.toDouble(),
+              label: '${settings.alertRepeatCount}×',
+              onChanged: (v) =>
+                  ref.read(settingsProvider.notifier).setAlertRepeatCount(v.round()),
             ),
             const Divider(),
           ],

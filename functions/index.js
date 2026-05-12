@@ -53,9 +53,13 @@ exports.onAlertEvent = onDocumentCreated(
         priority: 'high',
         ttl: 60_000,
         notification: {
-          channelId: 'alert_channel',
-          sound: 'default',
-          tag: 'babyguard-alert',
+          // Must match NotificationService.alertChannelKey in the Flutter app.
+          channelId: 'alert_channel_v2',
+          // Resolves to android/app/src/main/res/raw/baby_alert.mp3.
+          sound: 'baby_alert',
+          // Intentionally no `tag`: tag would coalesce successive alerts and
+          // suppress the sound re-play on most Android skins. We want each
+          // event to fire a fresh notification so the chime plays again.
         },
       },
       apns: {
@@ -65,7 +69,8 @@ exports.onAlertEvent = onDocumentCreated(
         },
         payload: {
           aps: {
-            sound: { name: 'default', critical: 1, volume: 1.0 },
+            // iOS expects the bundled filename including extension.
+            sound: { name: 'baby_alert.caf', critical: 1, volume: 1.0 },
             'interruption-level': 'critical',
             'content-available': 1,
           },
