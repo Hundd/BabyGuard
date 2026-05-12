@@ -25,27 +25,31 @@ class PairingState {
       );
 }
 
+/// Persistence keys used by both [PairingNotifier] and
+/// [loadPersistedPairingState].
+const _kRole = 'pairing_role';
+const _kPairId = 'pairing_id';
+
+/// Read pairing state from SharedPreferences. Call this from `main()` before
+/// `runApp` so the initial route can be computed synchronously on first build.
+Future<PairingState> loadPersistedPairingState() async {
+  final prefs = await SharedPreferences.getInstance();
+  final roleStr = prefs.getString(_kRole);
+  final pairId = prefs.getString(_kPairId);
+  return PairingState(
+    role: DeviceRole.values.firstWhere(
+      (r) => r.name == roleStr,
+      orElse: () => DeviceRole.unknown,
+    ),
+    pairId: pairId,
+    isPaired: pairId != null,
+  );
+}
+
 class PairingNotifier extends StateNotifier<PairingState> {
-  PairingNotifier() : super(const PairingState()) {
-    _hydrate();
-  }
-
-  static const _kRole = 'pairing_role';
-  static const _kPairId = 'pairing_id';
-
-  Future<void> _hydrate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final roleStr = prefs.getString(_kRole);
-    final pairId = prefs.getString(_kPairId);
-    state = PairingState(
-      role: DeviceRole.values.firstWhere(
-        (r) => r.name == roleStr,
-        orElse: () => DeviceRole.unknown,
-      ),
-      pairId: pairId,
-      isPaired: pairId != null,
-    );
-  }
+  /// Pass the value returned by [loadPersistedPairingState] so the notifier
+  /// starts with the persisted state already loaded — no async hydration race.
+  PairingNotifier([PairingState? initial]) : super(initial ?? const PairingState());
 
   Future<void> setRole(DeviceRole role) async {
     final prefs = await SharedPreferences.getInstance();
