@@ -75,6 +75,15 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
 
     debugPrint("babyguard.mon: " + 'monitoring started, pairId=$pairId');
     state = state.copyWith(isRunning: true, lastError: null);
+
+    // Tell the Parent we're listening. Fire-and-forget — failure shouldn't
+    // block the Baby unit from actually monitoring.
+    unawaited(PairingService.instance
+        .setBabyMonitoring(pairId: pairId, on: true)
+        .catchError((e) {
+      debugPrint('babyguard.mon: setBabyMonitoring(true) failed: $e');
+    }));
+
     return true;
   }
 
@@ -91,6 +100,16 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
   }
 
   Future<bool> stop() async {
+    final pairId = _activePairId;
+    // Clear the Parent-facing "listening" flag first so the Parent UI flips
+    // even if the local mic stop takes a beat.
+    if (pairId != null) {
+      unawaited(PairingService.instance
+          .setBabyMonitoring(pairId: pairId, on: false)
+          .catchError((e) {
+        debugPrint('babyguard.mon: setBabyMonitoring(false) failed: $e');
+      }));
+    }
     await _dbSub?.cancel();
     await _errSub?.cancel();
     await _meter.stop();

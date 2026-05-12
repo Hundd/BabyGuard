@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/router/app_router.dart';
 import 'firebase_options.dart';
+import 'providers/pairing_provider.dart';
 import 'services/background_service.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_service.dart';
@@ -30,7 +31,17 @@ Future<void> main() async {
     onActionReceivedMethod: _onNotificationAction,
   );
 
-  runApp(ProviderScope(child: BabyGuardApp()));
+  // Pre-load the pairing state so MaterialApp.initialRoute (which is consumed
+  // once on first build) sees the correct role + pairId — otherwise the user
+  // always lands on the onboarding screen even after pairing.
+  final initialPairing = await loadPersistedPairingState();
+
+  runApp(ProviderScope(
+    overrides: [
+      pairingProvider.overrideWith((ref) => PairingNotifier(initialPairing)),
+    ],
+    child: BabyGuardApp(),
+  ));
 }
 
 @pragma('vm:entry-point')

@@ -75,4 +75,17 @@ class PairingService {
   }) async {
     await _fb.pair(pairId).update({'parentToken': token});
   }
+
+  /// Baby unit signals its monitoring state to the Parent via the pair doc.
+  /// On `true` we also write a server-side timestamp so the Parent can use it
+  /// as a staleness floor (e.g. ignore "monitoring" older than 24 h).
+  Future<void> setBabyMonitoring({
+    required String pairId,
+    required bool on,
+  }) async {
+    await _fb.pair(pairId).update({
+      'babyMonitoring': on,
+      if (on) 'babyMonitoringStartedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }
