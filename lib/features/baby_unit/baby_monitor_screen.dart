@@ -104,8 +104,9 @@ class BabyMonitorScreen extends ConsumerWidget {
     await PermissionHelper.requestIgnoreBatteryOptimizations();
     final started = await notifier.start(pairId: pairId);
     if (!started && context.mounted) {
+      final reason = ref.read(monitoringProvider).lastError ?? 'unknown';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to start monitoring service')),
+        SnackBar(content: Text('Could not start monitoring: $reason')),
       );
     }
   }

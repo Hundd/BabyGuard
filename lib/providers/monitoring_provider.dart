@@ -35,7 +35,16 @@ class MonitoringState {
 }
 
 class MonitoringNotifier extends StateNotifier<MonitoringState> {
-  MonitoringNotifier(this._ref) : super(const MonitoringState());
+  MonitoringNotifier(this._ref) : super(const MonitoringState()) {
+    // Mirror persisted dB threshold from SettingsNotifier (SharedPreferences
+    // load is async). Also hot-updates the meter if monitoring is running.
+    _ref.listen<AppSettings>(settingsProvider, (prev, next) {
+      if (prev?.thresholdDb != next.thresholdDb) {
+        state = state.copyWith(thresholdDb: next.thresholdDb);
+        if (state.isRunning) _meter.updateThreshold(next.thresholdDb);
+      }
+    }, fireImmediately: true);
+  }
 
   final Ref _ref;
 
@@ -52,14 +61,17 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
     final fgOk = await BackgroundService.instance.start();
     debugPrint('babyguard.mon: foreground service start ok=$fgOk');
     if (!fgOk) {
-      debugPrint("babyguard.mon: " + 'foreground service failed to start');
-      state = state.copyWith(lastError: 'service_start_failed');
+      final reason = BackgroundService.instance.lastFailureReason ?? 'unknown';
+      debugPrint('babyguard.mon: foreground service failed: $reason');
+      state = state.copyWith(lastError: 'service_start_failed: $reason');
       return false;
     }
 
     try {
+      final triggerMs = _ref.read(settingsProvider).triggerDurationMs;
       await _meter.start(
         thresholdDb: state.thresholdDb,
+        debounce: Duration(milliseconds: triggerMs),
         onThresholdExceeded: _onThresholdExceeded,
       );
     } catch (e, st) {
@@ -130,10 +142,13 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
     return ok;
   }
 
-  Future<void> setThreshold(double db) async {
-    state = state.copyWith(thresholdDb: db);
+  Future<void> setThreshold(double db) =>
+      _ref.read(settingsProvider.notifier).setThreshold(db);
+
+  Future<void> setTriggerDuration(int ms) async {
+    await _ref.read(settingsProvider.notifier).setTriggerDurationMs(ms);
     if (state.isRunning) {
-      _meter.updateThreshold(db);
+      _meter.updateDebounce(Duration(milliseconds: ms));
     }
   }
 

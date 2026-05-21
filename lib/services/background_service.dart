@@ -41,7 +41,17 @@ class BackgroundService {
   BackgroundService._();
   static final BackgroundService instance = BackgroundService._();
 
-  Future<void> init() async {
+  /// Memoize so callers can `await init()` from anywhere — re-entry is a no-op
+  /// and we avoid the race where `start()` is invoked before the post-`runApp`
+  /// deferred init in main.dart has finished.
+  Future<void>? _initFuture;
+  String? lastFailureReason;
+
+  Future<void> init() {
+    return _initFuture ??= _runInit();
+  }
+
+  Future<void> _runInit() async {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: NotificationService.foregroundChannelKey,
@@ -62,18 +72,24 @@ class BackgroundService {
         allowWifiLock: true,
       ),
     );
+    developer.log('foreground task init complete', name: 'babyguard.bg');
   }
 
   Future<bool> start() async {
+    await init();
     if (await FlutterForegroundTask.isRunningService) return true;
     final result = await FlutterForegroundTask.startService(
       notificationTitle: 'BabyGuard is monitoring',
       notificationText: 'Listening for sounds. Tap to open.',
       callback: startMonitoringCallback,
     );
-    final ok = result is ServiceRequestSuccess;
     developer.log('startService result=$result', name: 'babyguard.bg');
-    return ok;
+    if (result is ServiceRequestSuccess) {
+      lastFailureReason = null;
+      return true;
+    }
+    lastFailureReason = result.toString();
+    return false;
   }
 
   Future<bool> stop() async {
