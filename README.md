@@ -22,6 +22,11 @@ make analyze     # static analysis
 
 Common day-to-day loop: edit code → `make ship` → test on phones. For a backend change: edit `functions/index.js` → `make deploy-fn` → `make logs-fn`.
 
+Ready to ship to the Play Store? Run `make aab` to produce a signed App Bundle, then walk through:
+
+- [docs/firebase_upgrade.md](docs/firebase_upgrade.md) — re-register the renamed Android app in Firebase, harden Firestore rules, enable App Check, restrict the API key.
+- [docs/googleplay_setup.md](docs/googleplay_setup.md) — Play Console account, App Signing, sensitive-permission declarations, listing assets, internal → production promotion ladder.
+
 ---
 
 ## Project structure
