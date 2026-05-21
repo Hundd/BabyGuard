@@ -2,6 +2,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
@@ -15,25 +16,17 @@ import 'services/notification_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ── Critical path: anything an early frame or background-isolate spawn
+  //    depends on must complete before runApp.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // FCM background handler must be registered before runApp.
+  // FCM background handler registration is a synchronous map insert — keep it
+  // here so a push that arrives while the app is being launched is handled
+  // correctly. Must happen before runApp.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  await NotificationService.instance.init();
-  await BackgroundService.instance.init();
-
-  // Foreground FCM listener (renders the alert when app is open).
-  FcmService.instance.listenForeground();
-
-  // Tapping the alert notification (any state) jumps to the full-screen AlertScreen.
-  AwesomeNotifications().setListeners(
-    onActionReceivedMethod: _onNotificationAction,
-  );
-
-  // Pre-load the pairing state so MaterialApp.initialRoute (which is consumed
-  // once on first build) sees the correct role + pairId — otherwise the user
-  // always lands on the onboarding screen even after pairing.
+  // initialRoute is computed once from this; if we defer it, the user always
+  // lands on onboarding because the provider would still be empty.
   final initialPairing = await loadPersistedPairingState();
 
   runApp(ProviderScope(
@@ -42,6 +35,23 @@ Future<void> main() async {
     ],
     child: BabyGuardApp(),
   ));
+
+  // ── Everything below was previously awaited before runApp, blocking the
+  //    splash for ~300-600 ms. None of it is required for the first frame:
+  //      * NotificationService: only matters when an alert renders, and the
+  //        first alert can't arrive before pairing (many seconds later).
+  //      * BackgroundService:   only needed when Baby taps Start Monitoring;
+  //        that action itself awaits when needed.
+  //      * FcmService.listenForeground / setListeners: handle inbound pushes;
+  //        missing the first ~200 ms is acceptable.
+  SchedulerBinding.instance.addPostFrameCallback((_) async {
+    await NotificationService.instance.init();
+    await BackgroundService.instance.init();
+    FcmService.instance.listenForeground();
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: _onNotificationAction,
+    );
+  });
 }
 
 @pragma('vm:entry-point')
