@@ -69,6 +69,13 @@ install: ## Install the debug APK on every attached device
 .PHONY: ship
 ship: build install ## Build debug APK and install on every attached device
 
+.PHONY: ship-release
+ship-release: release ## Build release APK (R8-shrunk, signed) and install on every attached device
+	@for d in $$(adb devices | awk 'NR>1 && $$2=="device"{print $$1}'); do \
+	  echo "→ $$d"; \
+	  adb -s "$$d" install -r $(APK_RELEASE); \
+	done
+
 .PHONY: run
 run: ## Run the app on the first attached device (hot-reload enabled)
 	flutter run --dart-define-from-file=$(FIREBASE_CONFIG)
