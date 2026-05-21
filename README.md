@@ -10,17 +10,29 @@ One phone becomes the **Baby Unit** (listens for sound in the background); the o
 Once your toolchain is set up (see [§ 1a](#1a-build-from-zero-on-macos-apple-silicon)) and Firebase config is in place ([§ 3](#wire-firebase-credentials)), drive everything through the `Makefile`:
 
 ```bash
-make help        # list every target
-make ship        # build debug APK and install on every attached device
-make run         # flutter run on the first attached device (hot reload)
-make logs        # tail flutter + errors from the phone
-make logs-fn     # tail Cloud Function logs
-make deploy-fn   # deploy Firestore rules + Cloud Functions
-make test        # widget smoke tests
-make analyze     # static analysis
+make help          # list every target
+
+# Daily dev (debug build, fast, big APK with full symbols)
+make ship          # build debug APK and install on every attached device
+make run           # flutter run on the first attached device (hot reload)
+make logs          # tail flutter + errors from the phone
+
+# Release (R8-shrunk, signed with the upload key — what real users get)
+make ship-release  # build release APK and install on every attached device
+make aab           # build signed App Bundle for Play Console upload
+
+# Backend (Cloud Functions + Firestore rules)
+make deploy-fn     # deploy Firestore rules + Cloud Functions
+make logs-fn       # tail Cloud Function logs
+
+# Quality gates
+make test          # widget smoke tests
+make analyze       # static analysis
 ```
 
-Common day-to-day loop: edit code → `make ship` → test on phones. For a backend change: edit `functions/index.js` → `make deploy-fn` → `make logs-fn`.
+Common day-to-day loop: edit code → `make ship` → test on phones. For a backend change: edit `functions/index.js` → `make deploy-fn` → `make logs-fn`. Before submitting to Play, do `make ship-release` on a real device to validate the R8-shrunk build behaves the same as debug (R8 occasionally strips a class used via reflection — logcat will show `ClassNotFoundException` if so).
+
+> **Switching between debug and release on the same phone** triggers an `INSTALL_FAILED_UPDATE_INCOMPATIBLE` error because the signatures differ. Run `adb uninstall com.hundd.babyguard` first, then retry.
 
 Ready to ship to the Play Store? Run `make aab` to produce a signed App Bundle, then walk through:
 
