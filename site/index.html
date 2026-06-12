@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BabyGuard — Downloads</title>
+<meta name="description" content="Download BabyGuard APK builds — Flutter + Firebase baby monitor.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👶</text></svg>">
+<style>
+  :root {
+    --bg: #0f1220;
+    --card: #1a1f33;
+    --card-border: #2a3150;
+    --text: #e8eaf2;
+    --muted: #9aa3c0;
+    --accent: #7c8cff;
+    --accent-strong: #5468ff;
+    --green: #4ade80;
+    --radius: 14px;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { text-align: center; margin-bottom: 36px; }
+  .logo { font-size: 56px; line-height: 1; }
+  h1 { margin: 10px 0 4px; font-size: 2rem; letter-spacing: -0.02em; }
+  .tagline { color: var(--muted); margin: 0; }
+  .repo-link { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+  .repo-link:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .card.latest { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
+  .release-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .release-head h2 { margin: 0; font-size: 1.25rem; }
+  .badge {
+    background: var(--accent-strong); color: #fff;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em;
+    padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge.pre { background: #b45309; }
+  .date { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
+  .notes { color: var(--muted); font-size: 0.92rem; white-space: pre-wrap; margin: 10px 0 0; }
+
+  .assets { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .asset {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: rgba(124, 140, 255, 0.07);
+    border: 1px solid var(--card-border);
+    border-radius: 10px; padding: 10px 14px;
+    text-decoration: none; color: var(--text);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .asset:hover { border-color: var(--accent); background: rgba(124, 140, 255, 0.14); }
+  .asset .name { font-weight: 600; word-break: break-all; }
+  .asset .meta { color: var(--muted); font-size: 0.82rem; margin-left: auto; white-space: nowrap; }
+  .asset .dl-icon { color: var(--green); font-size: 1.1rem; }
+
+  .empty, .error, .loading { text-align: center; color: var(--muted); padding: 50px 0; }
+  .error { color: #f87171; }
+
+  .howto { margin-top: 44px; }
+  .howto h3 { font-size: 1rem; margin-bottom: 8px; }
+  .howto ol { color: var(--muted); font-size: 0.92rem; padding-left: 20px; margin: 0; }
+  .howto li { margin-bottom: 4px; }
+  footer { margin-top: 40px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">👶</div>
+    <h1>BabyGuard</h1>
+    <p class="tagline">Baby monitor for two phones — Flutter + Firebase</p>
+    <p><a class="repo-link" href="https://github.com/Hundd/BabyGuard">github.com/Hundd/BabyGuard</a></p>
+  </header>
+
+  <main id="releases">
+    <div class="loading">Loading builds…</div>
+  </main>
+
+  <section class="howto">
+    <h3>Installing on Android</h3>
+    <ol>
+      <li>Download the <code>.apk</code> for the version you want.</li>
+      <li>Open the downloaded file. If prompted, allow your browser to <em>install unknown apps</em> (Settings → Apps → Special access).</li>
+      <li>You need <strong>two phones</strong>: one becomes the Baby Unit, the other the Parent Unit. Install on both.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Builds are published from <a href="https://github.com/Hundd/BabyGuard/releases">GitHub Releases</a>. MIT licensed.
+  </footer>
+</div>
+
+<script>
+const REPO = "Hundd/BabyGuard";
+
+function fmtSize(bytes) {
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
+  if (bytes >= 1024) return (bytes / 1024).toFixed(0) + " KB";
+  return bytes + " B";
+}
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+async function load() {
+  const root = document.getElementById("releases");
+  let releases;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=50`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) throw new Error(`GitHub API responded ${res.status}`);
+    releases = await res.json();
+  } catch (err) {
+    root.replaceChildren(el("div", "error",
+      "Couldn't load releases (" + err.message + "). Try the GitHub releases page directly."));
+    return;
+  }
+
+  releases = releases.filter(r => !r.draft);
+  if (releases.length === 0) {
+    root.replaceChildren(el("div", "empty", "No builds published yet — check back soon."));
+    return;
+  }
+
+  root.replaceChildren();
+  releases.forEach((rel, i) => {
+    const card = el("article", "card" + (i === 0 ? " latest" : ""));
+
+    const head = el("div", "release-head");
+    head.appendChild(el("h2", null, rel.name || rel.tag_name));
+    if (i === 0) head.appendChild(el("span", "badge", "Latest"));
+    if (rel.prerelease) head.appendChild(el("span", "badge pre", "Pre-release"));
+    head.appendChild(el("span", "date", fmtDate(rel.published_at)));
+    card.appendChild(head);
+
+    if (rel.body) {
+      const notes = el("p", "notes", rel.body.length > 600 ? rel.body.slice(0, 600) + "…" : rel.body);
+      card.appendChild(notes);
+    }
+
+    const assets = el("div", "assets");
+    const files = rel.assets.filter(a => a.name.endsWith(".apk") || a.name.endsWith(".aab"));
+    if (files.length === 0) {
+      assets.appendChild(el("div", "notes", "No APK attached to this release."));
+    }
+    files.forEach(a => {
+      const link = el("a", "asset");
+      link.href = a.browser_download_url;
+      link.appendChild(el("span", "dl-icon", "⬇"));
+      link.appendChild(el("span", "name", a.name));
+      link.appendChild(el("span", "meta", fmtSize(a.size) + " · " + a.download_count + " downloads"));
+      assets.appendChild(link);
+    });
+    card.appendChild(assets);
+    root.appendChild(card);
+  });
+}
+
+load();
+</script>
+</body>
+</html>

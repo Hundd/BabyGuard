@@ -20,6 +20,7 @@ make logs          # tail flutter + errors from the phone
 # Release (R8-shrunk, signed with the upload key — what real users get)
 make ship-release  # build release APK and install on every attached device
 make aab           # build signed App Bundle for Play Console upload
+make publish       # upload the release APK as a GitHub Release (powers the downloads site)
 
 # Backend (Cloud Functions + Firestore rules)
 make deploy-fn     # deploy Firestore rules + Cloud Functions
@@ -38,6 +39,20 @@ Ready to ship to the Play Store? Run `make aab` to produce a signed App Bundle, 
 
 - [docs/firebase_upgrade.md](docs/firebase_upgrade.md) — re-register the renamed Android app in Firebase, harden Firestore rules, enable App Check, restrict the API key.
 - [docs/googleplay_setup.md](docs/googleplay_setup.md) — Play Console account, App Signing, sensitive-permission declarations, listing assets, internal → production promotion ladder.
+
+## Downloads site
+
+All published builds are listed at **<https://babyguard.polchaninov.click>** — a static page on GitHub Pages ([site/index.html](site/index.html)) that reads this repo's GitHub Releases via the public API, so it updates the moment a release is published. Deploys happen automatically via [.github/workflows/pages.yml](.github/workflows/pages.yml) when `site/` changes on `main`; the custom domain is a Route53 CNAME (`babyguard.polchaninov.click → hundd.github.io`).
+
+To ship a new build to the site:
+
+```bash
+# 1. bump version: in pubspec.yaml (e.g. 0.1.0+1 -> 0.2.0+2), commit
+make release   # build the signed R8-shrunk APK
+make publish   # create GitHub Release v<version> with babyguard-v<version>.apk attached
+```
+
+`make publish` requires the `gh` CLI authenticated to github.com (`gh auth login`). Re-publishing the same version fails because the release tag already exists — bump the version in `pubspec.yaml` first.
 
 ---
 

@@ -53,6 +53,19 @@ clean: ## Wipe build artifacts
 	flutter clean
 	rm -rf build/
 
+##@ Distribution
+
+# Semantic version from pubspec.yaml ("0.1.0+1" -> "0.1.0").
+VERSION := $(shell sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+
+.PHONY: publish
+publish: ## Publish the release APK as GitHub Release v$(VERSION) — feeds babyguard.polchaninov.click
+	@test -f $(APK_RELEASE) || { echo "✗ $(APK_RELEASE) missing — run 'make release' first"; exit 1; }
+	cp $(APK_RELEASE) build/babyguard-v$(VERSION).apk
+	gh release create v$(VERSION) build/babyguard-v$(VERSION).apk \
+	  --title "BabyGuard v$(VERSION)" --generate-notes
+	@echo "→ https://babyguard.polchaninov.click"
+
 ##@ Devices
 
 .PHONY: devices
