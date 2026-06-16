@@ -152,26 +152,48 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-/** Turn GitHub release markdown (links, bold, bare URLs) into safe HTML. */
+/** Default body from `gh release create --generate-notes`. */
+function parseGeneratedChangelog(body) {
+  const m = body.trim().match(/^\*\*Full Changelog\*\*:\s*(https:\/\/github\.com\/\S+)\s*$/i);
+  return m ? m[1] : null;
+}
+
+function changelogLink(url, label) {
+  const a = el("a", "changelog-link");
+  a.href = url;
+  a.rel = "noopener noreferrer";
+  a.textContent = label;
+  return a;
+}
+
+/** Turn release markdown into safe HTML — single pass, no re-linkifying inside tags. */
 function formatNotes(md) {
   let s = escapeHtml(md.trim());
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
     '<a href="$2" rel="noopener noreferrer">$1</a>');
-  s = s.replace(/\*\*Full Changelog\*\*:\s*(https?:\/\/github\.com\/[^/]+\/[^/]+\/compare\/[^\s<]+)/gi,
-    '<a class="changelog-link" href="$1" rel="noopener noreferrer">View full changelog</a>');
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  s = s.replace(/(https?:\/\/github\.com\/[^/]+\/[^/]+\/compare\/[^\s<]+)/g,
-    '<a href="$1" rel="noopener noreferrer">View full changelog</a>');
-  s = s.replace(/(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" rel="noopener noreferrer">$1</a>');
+  if (!s.includes("<a ")) {
+    s = s.replace(/(https?:\/\/\S+)/g, (url) => {
+      const label = /\/compare\//.test(url) ? "View full changelog" : url;
+      const cls = /\/compare\//.test(url) ? ' class="changelog-link"' : "";
+      return `<a${cls} href="${url}" rel="noopener noreferrer">${label}</a>`;
+    });
+  }
   return s;
 }
 
-function notesEl(body) {
+function releaseNotesEl(body, htmlUrl) {
   const trimmed = body.length > 600 ? body.slice(0, 600) + "…" : body;
-  const p = el("p", "notes");
-  p.innerHTML = formatNotes(trimmed);
-  return p;
+  const compareUrl = parseGeneratedChangelog(trimmed);
+  if (compareUrl) return changelogLink(compareUrl, "View full changelog");
+
+  if (trimmed) {
+    const p = el("p", "notes");
+    p.innerHTML = formatNotes(trimmed);
+    return p;
+  }
+  if (htmlUrl) return changelogLink(htmlUrl, "View release notes on GitHub");
+  return null;
 }
 
 async function load() {
@@ -206,15 +228,8 @@ async function load() {
     head.appendChild(el("span", "date", fmtDate(rel.published_at)));
     card.appendChild(head);
 
-    if (rel.body) {
-      card.appendChild(notesEl(rel.body));
-    } else if (rel.html_url) {
-      const link = el("a", "changelog-link");
-      link.href = rel.html_url;
-      link.rel = "noopener noreferrer";
-      link.textContent = "View release notes on GitHub";
-      card.appendChild(link);
-    }
+    const notes = releaseNotesEl(rel.body || "", rel.html_url);
+    if (notes) card.appendChild(notes);
 
     const assets = el("div", "assets");
     const files = rel.assets.filter(a => a.name.endsWith(".apk") || a.name.endsWith(".aab"));
