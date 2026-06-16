@@ -63,7 +63,12 @@ android {
                 signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
-            isShrinkResources = true
+            // Resource shrinking strips res/raw/baby_alert.mp3 because the
+            // file is loaded by string name (not R.raw.baby_alert) and a
+            // tools:keep marker had no effect on this project. Keep code
+            // minification (R8 proper) and accept the few MB of resource
+            // overhead until we find a way to selectively keep raw assets.
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

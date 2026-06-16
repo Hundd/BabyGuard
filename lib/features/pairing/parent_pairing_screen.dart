@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/router/app_router.dart';
 import '../../core/utils/pair_code.dart';
 import '../../core/utils/permissions.dart';
 import '../../providers/pairing_provider.dart';
@@ -55,7 +56,7 @@ class _ParentPairingScreenState extends ConsumerState<ParentPairingScreen> {
         return;
       }
       await ref.read(pairingProvider.notifier).setPairId(code);
-      if (mounted) Navigator.of(context).pushReplacementNamed('/parent/monitor');
+      if (mounted) AppRouter.goReplaceAll(context, AppRouter.parentMonitor);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {

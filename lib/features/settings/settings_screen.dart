@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/router/app_router.dart';
 import '../../providers/monitoring_provider.dart';
 import '../../providers/pairing_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -37,6 +38,27 @@ class SettingsScreen extends ConsumerWidget {
               value: monitoring.thresholdDb,
               label: '${monitoring.thresholdDb.toStringAsFixed(0)} dB',
               onChanged: (v) => ref.read(monitoringProvider.notifier).setThreshold(v),
+            ),
+            const Divider(),
+            ListTile(
+              title: const Text('Trigger duration'),
+              subtitle: Text(
+                '${settings.triggerDurationMs} ms — dB must stay above the '
+                'threshold this long before an alert fires.',
+              ),
+              trailing: const Icon(Icons.timer),
+            ),
+            Slider(
+              min: SettingsNotifier.triggerDurationMinMs.toDouble(),
+              max: SettingsNotifier.triggerDurationMaxMs.toDouble(),
+              divisions: (SettingsNotifier.triggerDurationMaxMs -
+                      SettingsNotifier.triggerDurationMinMs) ~/
+                  100,
+              value: settings.triggerDurationMs.toDouble(),
+              label: '${settings.triggerDurationMs} ms',
+              onChanged: (v) => ref
+                  .read(monitoringProvider.notifier)
+                  .setTriggerDuration(v.round()),
             ),
             const Divider(),
             ListTile(
@@ -94,7 +116,7 @@ class SettingsScreen extends ConsumerWidget {
               await ref.read(monitoringProvider.notifier).stop();
               await ref.read(pairingProvider.notifier).clear();
               if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+                AppRouter.goReplaceAll(context, AppRouter.onboarding);
               }
             },
           ),

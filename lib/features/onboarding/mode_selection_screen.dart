@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/router/app_router.dart';
 import '../../providers/pairing_provider.dart';
 import '../../widgets/app_scaffold.dart';
 
@@ -11,6 +12,26 @@ class ModeSelectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Safety net: if pairing is still persisted, skip role selection.
+    ref.listen<PairingState>(pairingProvider, (prev, next) {
+      if (next.pairId == null || !context.mounted) return;
+      final route = next.role == DeviceRole.baby
+          ? AppRouter.babyMonitor
+          : AppRouter.parentMonitor;
+      AppRouter.goReplaceAll(context, route);
+    });
+
+    final pairing = ref.watch(pairingProvider);
+    if (pairing.pairId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        final route = pairing.role == DeviceRole.baby
+            ? AppRouter.babyMonitor
+            : AppRouter.parentMonitor;
+        AppRouter.goReplaceAll(context, route);
+      });
+    }
+
     return AppScaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,7 +68,7 @@ class ModeSelectionScreen extends ConsumerWidget {
             onTap: () async {
               await ref.read(pairingProvider.notifier).setRole(DeviceRole.baby);
               if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/baby/pair');
+                AppRouter.goReplaceAll(context, AppRouter.babyPair);
               }
             },
           ),
@@ -60,7 +81,7 @@ class ModeSelectionScreen extends ConsumerWidget {
             onTap: () async {
               await ref.read(pairingProvider.notifier).setRole(DeviceRole.parent);
               if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/parent/pair');
+                AppRouter.goReplaceAll(context, AppRouter.parentPair);
               }
             },
           ),

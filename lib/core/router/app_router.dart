@@ -38,4 +38,10 @@ class AppRouter {
     if (state.role == DeviceRole.parent) return parentPair;
     return onboarding;
   }
+
+  /// Replaces the entire stack — use for post-pairing / role-selection hops so
+  /// nothing (especially onboarding) remains under the monitor screen.
+  static void goReplaceAll(BuildContext context, String route) {
+    Navigator.of(context).pushNamedAndRemoveUntil(route, (_) => false);
+  }
 }

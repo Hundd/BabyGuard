@@ -17,7 +17,10 @@ class BabyGuardApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pairing = ref.watch(pairingProvider);
+    // Read once — do not watch. Rebuilding MaterialApp when pairing changes
+    // can leave stale routes (e.g. onboarding) under the monitor screen so
+    // the system back button pops to role selection while still paired.
+    final pairing = ref.read(pairingProvider);
 
     return MaterialApp(
       title: AppStrings.appName,

@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../providers/alert_history_provider.dart';
 import '../../providers/pairing_provider.dart';
 import '../../services/pairing_service.dart';
 import '../../widgets/app_scaffold.dart';
@@ -27,58 +30,71 @@ class ParentMonitorScreen extends ConsumerWidget {
     final babyState = _deriveBabyState(data);
     final muted = data?['parentMuted'] == true;
     final pairId = pairing.pairId;
+    final history = ref.watch(alertHistoryProvider);
 
-    return AppScaffold(
-      title: AppStrings.parentUnit,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
-        ),
-      ],
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 16),
-          Center(
-            child: muted
-                ? StatusPill.warning('Alerts paused')
-                : _statusPillFor(babyState),
+    ref.listen<AsyncValue<RemoteMessage>>(foregroundAlertStreamProvider,
+        (_, next) {
+      next.whenData((_) => ref.read(alertHistoryProvider.notifier).add());
+    });
+
+    return PopScope(
+      canPop: false,
+      child: AppScaffold(
+        title: AppStrings.parentUnit,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).pushNamed('/settings'),
           ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  _StatusIcon(state: muted ? _BabyState.notConnected : babyState),
-                  const SizedBox(height: 16),
-                  Text(
-                    muted ? 'Alerts are paused on this device.' : _headlineFor(babyState),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  if (pairId != null)
-                    Text(
-                      'Pair code: $pairId',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, letterSpacing: 2),
-                    ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Keep this app installed and notifications enabled — '
-                    'alerts will wake your phone with a loud sound and full-screen prompt.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (pairId != null) _PauseCard(pairId: pairId, muted: muted),
         ],
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 16),
+              Center(
+                child: muted
+                    ? StatusPill.warning('Alerts paused')
+                    : _statusPillFor(babyState),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      _StatusIcon(state: muted ? _BabyState.notConnected : babyState),
+                      const SizedBox(height: 16),
+                      Text(
+                        muted ? 'Alerts are paused on this device.' : _headlineFor(babyState),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      if (pairId != null)
+                        Text(
+                          'Pair code: $pairId',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, letterSpacing: 2),
+                        ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Keep this app installed and notifications enabled — '
+                        'alerts will wake your phone with a loud sound and full-screen prompt.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (history.isNotEmpty) _AlertHistoryCard(history: history),
+              if (history.isNotEmpty) const SizedBox(height: 16),
+              if (pairId != null) _PauseCard(pairId: pairId, muted: muted),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -118,6 +134,61 @@ class ParentMonitorScreen extends ConsumerWidget {
       case _BabyState.notConnected:
         return 'Pair with a baby unit to begin.';
     }
+  }
+}
+
+/// In-session list of foreground-received alerts. Hidden when empty.
+class _AlertHistoryCard extends StatelessWidget {
+  final List<DateTime> history;
+
+  const _AlertHistoryCard({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Recent alerts',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            for (final ts in history)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.notifications_active_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${_relative(now, ts)} · ${DateFormat.jm().format(ts)}',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _relative(DateTime now, DateTime then) {
+    final diff = now.difference(then);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} h ago';
+    return DateFormat('MMM d').format(then);
   }
 }
 

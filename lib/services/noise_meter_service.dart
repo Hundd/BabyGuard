@@ -44,6 +44,10 @@ class NoiseMeterService {
     _threshold = db;
   }
 
+  void updateDebounce(Duration d) {
+    _debounce = d;
+  }
+
   void _onReading(NoiseReading reading) {
     // noise_meter reports `meanDecibel` and `maxDecibel`. We use mean for stability.
     final db = reading.meanDecibel.isFinite ? reading.meanDecibel : 0;

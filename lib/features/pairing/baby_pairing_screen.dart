@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/router/app_router.dart';
 import '../../providers/pairing_provider.dart';
 import '../../services/fcm_service.dart';
 import '../../services/firebase_service.dart';
@@ -63,7 +64,7 @@ class _BabyPairingScreenState extends ConsumerState<BabyPairingScreen> {
         (prev, next) {
       final data = next.value?.data();
       if (data != null && data['status'] == 'paired' && mounted) {
-        Navigator.of(context).pushReplacementNamed('/baby/monitor');
+        AppRouter.goReplaceAll(context, AppRouter.babyMonitor);
       }
     });
 

@@ -22,60 +22,63 @@ class BabyMonitorScreen extends ConsumerWidget {
     final pairing = ref.watch(pairingProvider);
     final pairId = pairing.pairId;
 
-    return AppScaffold(
-      title: AppStrings.babyUnit,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
-        ),
-      ],
-      body: pairId == null
-          ? const Center(child: Text('Not paired yet.'))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: monitoring.isRunning
-                      ? StatusPill.success(AppStrings.monitoring)
-                      : StatusPill.idle(AppStrings.idle),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text('Pair code: $pairId',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, letterSpacing: 2)),
-                ),
-                const SizedBox(height: 24),
-                DbMeterGauge(
-                  currentDb: monitoring.currentDb,
-                  thresholdDb: monitoring.thresholdDb,
-                ),
-                const SizedBox(height: 16),
-                ThresholdSlider(
-                  value: monitoring.thresholdDb,
-                  onChanged: (v) =>
-                      ref.read(monitoringProvider.notifier).setThreshold(v),
-                ),
-                if (monitoring.lastError != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Last error: ${monitoring.lastError}',
-                    style: const TextStyle(color: AppColors.danger, fontSize: 12),
+    return PopScope(
+      canPop: false,
+      child: AppScaffold(
+        title: AppStrings.babyUnit,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          ),
+        ],
+        body: pairId == null
+            ? const Center(child: Text('Not paired yet.'))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: monitoring.isRunning
+                        ? StatusPill.success(AppStrings.monitoring)
+                        : StatusPill.idle(AppStrings.idle),
                   ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text('Pair code: $pairId',
+                        style: const TextStyle(
+                            color: AppColors.textSecondary, letterSpacing: 2)),
+                  ),
+                  const SizedBox(height: 24),
+                  DbMeterGauge(
+                    currentDb: monitoring.currentDb,
+                    thresholdDb: monitoring.thresholdDb,
+                  ),
+                  const SizedBox(height: 16),
+                  ThresholdSlider(
+                    value: monitoring.thresholdDb,
+                    onChanged: (v) =>
+                        ref.read(monitoringProvider.notifier).setThreshold(v),
+                  ),
+                  if (monitoring.lastError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Last error: ${monitoring.lastError}',
+                      style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                    ),
+                  ],
+                  const Spacer(),
+                  BigButton(
+                    label: monitoring.isRunning
+                        ? AppStrings.stopMonitoring
+                        : AppStrings.startMonitoring,
+                    icon: monitoring.isRunning ? Icons.stop : Icons.play_arrow,
+                    backgroundColor: monitoring.isRunning ? AppColors.danger : AppColors.primary,
+                    onPressed: () => _toggle(context, ref, pairId),
+                  ),
+                  const SizedBox(height: 16),
                 ],
-                const Spacer(),
-                BigButton(
-                  label: monitoring.isRunning
-                      ? AppStrings.stopMonitoring
-                      : AppStrings.startMonitoring,
-                  icon: monitoring.isRunning ? Icons.stop : Icons.play_arrow,
-                  backgroundColor: monitoring.isRunning ? AppColors.danger : AppColors.primary,
-                  onPressed: () => _toggle(context, ref, pairId),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+              ),
+      ),
     );
   }
 
