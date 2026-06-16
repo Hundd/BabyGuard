@@ -52,7 +52,18 @@
   }
   .badge.pre { background: #b45309; }
   .date { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
-  .notes { color: var(--muted); font-size: 0.92rem; white-space: pre-wrap; margin: 10px 0 0; }
+  .notes {
+    color: var(--muted); font-size: 0.92rem; white-space: pre-wrap;
+    margin: 10px 0 0; overflow-wrap: anywhere; word-break: break-word;
+  }
+  .notes a, .changelog-link {
+    color: var(--accent); text-decoration: underline;
+    text-underline-offset: 2px; -webkit-tap-highlight-color: rgba(124, 140, 255, 0.25);
+  }
+  .notes a:active, .changelog-link:active { color: var(--accent-strong); }
+  .changelog-link {
+    display: inline-block; margin-top: 8px; font-size: 0.92rem; font-weight: 600;
+  }
 
   .assets { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
   .asset {
@@ -64,9 +75,16 @@
     transition: border-color 0.15s, background 0.15s;
   }
   .asset:hover { border-color: var(--accent); background: rgba(124, 140, 255, 0.14); }
-  .asset .name { font-weight: 600; word-break: break-all; }
-  .asset .meta { color: var(--muted); font-size: 0.82rem; margin-left: auto; white-space: nowrap; }
-  .asset .dl-icon { color: var(--green); font-size: 1.1rem; }
+  .asset .name { font-weight: 600; overflow-wrap: anywhere; word-break: break-word; min-width: 0; flex: 1 1 140px; }
+  .asset .meta { color: var(--muted); font-size: 0.82rem; margin-left: auto; }
+  .asset .dl-icon { color: var(--green); font-size: 1.1rem; flex-shrink: 0; }
+
+  @media (max-width: 520px) {
+    .wrap { padding: 28px 16px 60px; }
+    .release-head .date { margin-left: 0; width: 100%; }
+    .asset { align-items: flex-start; }
+    .asset .meta { margin-left: 0; width: 100%; }
+  }
 
   .empty, .error, .loading { text-align: center; color: var(--muted); padding: 50px 0; }
   .error { color: #f87171; }
@@ -126,6 +144,36 @@ function el(tag, cls, text) {
   return e;
 }
 
+function escapeHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Turn GitHub release markdown (links, bold, bare URLs) into safe HTML. */
+function formatNotes(md) {
+  let s = escapeHtml(md.trim());
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+    '<a href="$2" rel="noopener noreferrer">$1</a>');
+  s = s.replace(/\*\*Full Changelog\*\*:\s*(https?:\/\/github\.com\/[^/]+\/[^/]+\/compare\/[^\s<]+)/gi,
+    '<a class="changelog-link" href="$1" rel="noopener noreferrer">View full changelog</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(https?:\/\/github\.com\/[^/]+\/[^/]+\/compare\/[^\s<]+)/g,
+    '<a href="$1" rel="noopener noreferrer">View full changelog</a>');
+  s = s.replace(/(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" rel="noopener noreferrer">$1</a>');
+  return s;
+}
+
+function notesEl(body) {
+  const trimmed = body.length > 600 ? body.slice(0, 600) + "…" : body;
+  const p = el("p", "notes");
+  p.innerHTML = formatNotes(trimmed);
+  return p;
+}
+
 async function load() {
   const root = document.getElementById("releases");
   let releases;
@@ -159,8 +207,13 @@ async function load() {
     card.appendChild(head);
 
     if (rel.body) {
-      const notes = el("p", "notes", rel.body.length > 600 ? rel.body.slice(0, 600) + "…" : rel.body);
-      card.appendChild(notes);
+      card.appendChild(notesEl(rel.body));
+    } else if (rel.html_url) {
+      const link = el("a", "changelog-link");
+      link.href = rel.html_url;
+      link.rel = "noopener noreferrer";
+      link.textContent = "View release notes on GitHub";
+      card.appendChild(link);
     }
 
     const assets = el("div", "assets");
